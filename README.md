@@ -28,6 +28,9 @@ skill-dep-fixer --dry-run
 - `--dry-run` show what would be installed (no changes)
 - `--fix` install missing dependencies
 - `--skill <name>` only check a specific skill
+- `--init <name>` create `~/.openclaw/workspace/skills/<name>/SKILL.md`
+- `--name <name>` display name used in `# <Skill Name>` when used with `--init`
+- `--description <text>` description frontmatter value for `--init` (prompts if omitted)
 - `--json` output machine-readable JSON
 - `--report` output compact Discord-formatted report
 - `--help` show usage
@@ -49,6 +52,12 @@ skill-dep-fixer --json --dry-run
 
 # Discord-ready message
 skill-dep-fixer --report --dry-run
+
+# create a new skill template (prompts for missing fields)
+skill-dep-fixer --init my-new-skill
+
+# create without prompts
+skill-dep-fixer --init my-new-skill --name "My New Skill" --description "Does useful things"
 ```
 
 ## Example output
