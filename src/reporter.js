@@ -21,6 +21,7 @@ function iconForStatus(status) {
   if (status === 'ok') return '✅';
   if (status === 'fixed') return '🔧';
   if (status === 'failed') return '❌';
+  if (status === 'mismatch') return '⚠️';
   return '⚠️';
 }
 
@@ -35,14 +36,24 @@ function textReport(results) {
   const lines = [];
   lines.push(chalk.bold('Skill Dependency Report'));
   lines.push('');
-  lines.push('Skill'.padEnd(32) + 'Status'.padEnd(12) + 'Missing Dependencies');
-  lines.push('-'.repeat(84));
+  lines.push('Skill'.padEnd(32) + 'Status'.padEnd(12) + 'Details');
+  lines.push('-'.repeat(100));
 
   for (const skill of results.skills) {
     const missing = (skill.missing || []).map((m) => m.label).join(', ') || 'none';
     const left = `${iconForStatus(skill.status)} ${skill.name}`.padEnd(32);
     const status = colorStatus(skill.status).padEnd(12);
-    lines.push(`${left}${status}${missing}`);
+    lines.push(`${left}${status}missing: ${missing}`);
+
+    const mismatchNames = new Set((skill.mismatches || []).map((m) => m.name));
+    for (const dep of skill.dependencies || []) {
+      const depStatus = mismatchNames.has(dep.name) ? 'mismatch' : dep.found ? 'ok' : 'missing';
+      const declared = dep.declared ? ` (declared: ${dep.declared})` : '';
+      const version = dep.version || 'unknown';
+      const depIcon = depStatus === 'ok' ? '✅' : depStatus === 'mismatch' ? '⚠️' : '❌';
+      lines.push(`   ${depIcon} ${dep.name} ${version}${declared} :: ${depStatus}`);
+    }
+
     if (skill.error) lines.push(`   ${chalk.red('error:')} ${skill.error}`);
   }
 
@@ -72,6 +83,16 @@ function discordReport(results) {
   for (const skill of results.skills) {
     const missing = (skill.missing || []).map((m) => m.label).join(', ') || 'none';
     lines.push(`${iconForStatus(skill.status)} ${skill.name} :: ${skill.status} :: missing: ${missing}`);
+
+    const mismatchNames = new Set((skill.mismatches || []).map((m) => m.name));
+    for (const dep of skill.dependencies || []) {
+      const depStatus = mismatchNames.has(dep.name) ? 'mismatch' : dep.found ? 'ok' : 'missing';
+      const declared = dep.declared ? ` (declared: ${dep.declared})` : '';
+      const version = dep.version || 'unknown';
+      const depIcon = depStatus === 'ok' ? '✅' : depStatus === 'mismatch' ? '⚠️' : '❌';
+      lines.push(`${depIcon} ${dep.name} ${version}${declared} :: ${depStatus}`);
+    }
+
     if (skill.error) lines.push(`   error: ${skill.error}`);
   }
   lines.push('```');
