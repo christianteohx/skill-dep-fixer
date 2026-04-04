@@ -1,6 +1,7 @@
 # skill-dep-fixer
 
-Checks OpenClaw skill dependencies from `SKILL.md` frontmatter and reports missing binaries.
+Checks OpenClaw skill dependencies from `SKILL.md` frontmatter, reports missing binaries,
+and detects installed-vs-declared version mismatches.
 Optionally installs missing dependencies declared in `metadata.openclaw.install`.
 
 ## Install
@@ -67,10 +68,12 @@ Text report:
 ```text
 Skill Dependency Report
 
-Skill                            Status      Missing Dependencies
-------------------------------------------------------------------------------------
-✅ weather                       ok          none
-⚠️ summarize                     skipped     bin:yt-dlp
+Skill                            Status      Details
+----------------------------------------------------------------------------------------------------
+✅ github                         ok          missing: none
+   ✅ gh 2.54.0 :: ok
+⚠️ some-skill                     mismatch    missing: none
+   ⚠️ github 2.53.0 (declared: 2.54.0) :: mismatch
 
 Summary
 total=2  fixed=1  failed=0  skipped=1
@@ -84,7 +87,8 @@ JSON report:
     {
       "name": "weather",
       "status": "ok",
-      "missing": []
+      "missing": [],
+      "mismatches": []
     }
   ],
   "summary": {
@@ -94,4 +98,19 @@ JSON report:
     "skipped": 0
   }
 }
+```
+
+## Optional `version` in install directives
+
+If a skill declares a version under `metadata.openclaw.install[]`, `skill-dep-fixer`
+compares it against the installed version when available:
+
+```yaml
+metadata:
+  openclaw:
+    install:
+      - kind: npm
+        id: github
+        version: 2.54.0
+        bins: [gh]
 ```
