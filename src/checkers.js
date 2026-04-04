@@ -1,5 +1,9 @@
 const { exec } = require('child_process');
 
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
 function run(command) {
   return new Promise((resolve) => {
     exec(command, (error, stdout, stderr) => {
@@ -9,7 +13,7 @@ function run(command) {
 }
 
 async function checkBinary(name) {
-  const result = await run(`which ${name}`);
+  const result = await run(`which ${shellQuote(name)}`);
   const error = (result.stderr || result.error?.message || '').trim();
 
   if (!result.ok) {
@@ -20,7 +24,7 @@ async function checkBinary(name) {
 }
 
 async function checkBrew(formula) {
-  const result = await run(`brew list ${formula} --versions`);
+  const result = await run(`brew list ${shellQuote(formula)} --versions`);
   const output = (result.stdout || '').trim();
   const error = (result.stderr || result.error?.message || '').trim();
 
@@ -34,7 +38,7 @@ async function checkBrew(formula) {
 }
 
 async function checkNpm(pkg) {
-  const result = await run(`npm list -g ${pkg} --depth=0`);
+  const result = await run(`npm list -g ${shellQuote(pkg)} --depth=0`);
   const output = `${result.stdout || ''}\n${result.stderr || ''}`;
   const error = (result.stderr || result.error?.message || '').trim();
 
@@ -52,9 +56,9 @@ function parsePipVersion(output) {
 }
 
 async function checkPip(pkg) {
-  let result = await run(`pip show ${pkg}`);
+  let result = await run(`pip show ${shellQuote(pkg)}`);
   if (!result.ok) {
-    result = await run(`pip3 show ${pkg}`);
+    result = await run(`pip3 show ${shellQuote(pkg)}`);
   }
 
   const output = (result.stdout || '').trim();
