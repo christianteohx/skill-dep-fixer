@@ -1,57 +1,38 @@
-const { execSync, spawnSync } = require('child_process');
+const { exec } = require('child_process');
 
 function run(command) {
-  return execSync(command, {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    encoding: 'utf8',
-    shell: '/bin/bash',
+  return new Promise((resolve) => {
+    exec(command, (error, stdout, stderr) => {
+      resolve({ ok: !error, stdout, stderr, error });
+    });
   });
 }
 
-function shellQuote(value) {
-  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+async function checkBinary(name) {
+  const result = await run(`which ${name}`);
+  return { name, found: result.ok };
 }
 
-function checkBrew(name) {
-  try {
-    run(`brew list ${shellQuote(name)} 2>/dev/null`);
-    return { name, found: true };
-  } catch {
-    return { name, found: false };
-  }
+async function checkBrew(formula) {
+  const result = await run(`brew list ${formula}`);
+  return { name: formula, found: result.ok };
 }
 
-function checkNpm(name) {
-  try {
-    const output = run('npm list -g --depth=0');
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = output.match(new RegExp(`(?:^|\\n).*${escaped}@(\\S+)`, 'i'));
-
-    if (!match) {
-      return { name, found: false };
-    }
-
-    return { name, found: true, version: match[1] };
-  } catch (error) {
-    const stderr = error?.stderr?.toString()?.trim() || error?.message || 'Unknown error';
-    return { name, found: false, error: stderr };
-  }
+async function checkNpm(pkg) {
+  const result = await run(`npm list -g ${pkg}`);
+  return { name: pkg, found: result.ok };
 }
 
-function checkPip(name) {
-  const result = spawnSync('pip', ['show', name], { encoding: 'utf8' });
-
-  if (result.status !== 0) {
-    return { name, found: false };
+async function checkPip(pkg) {
+  let result = await run(`pip show ${pkg}`);
+  if (!result.ok) {
+    result = await run(`pip3 show ${pkg}`);
   }
-
-  const versionLine = (result.stdout || '').split('\n').find((line) => line.startsWith('Version:'));
-  const version = versionLine ? versionLine.replace('Version:', '').trim() : undefined;
-
-  return version ? { name, found: true, version } : { name, found: true };
+  return { name: pkg, found: result.ok };
 }
 
 module.exports = {
+  checkBinary,
   checkBrew,
   checkNpm,
   checkPip,
