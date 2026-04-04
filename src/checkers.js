@@ -10,17 +10,45 @@ function run(command) {
 
 async function checkBinary(name) {
   const result = await run(`which ${name}`);
-  return { name, found: result.ok };
+  const error = (result.stderr || result.error?.message || '').trim();
+
+  if (!result.ok) {
+    return { name, found: false, error: error || `binary not found: ${name}` };
+  }
+
+  return { name, found: true };
 }
 
 async function checkBrew(formula) {
-  const result = await run(`brew list ${formula}`);
-  return { name: formula, found: result.ok };
+  const result = await run(`brew list ${formula} --versions`);
+  const output = (result.stdout || '').trim();
+  const error = (result.stderr || result.error?.message || '').trim();
+
+  if (!result.ok || !output) {
+    return { name: formula, found: false, error: error || `formula not installed: ${formula}` };
+  }
+
+  const parts = output.split(/\s+/);
+  const version = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+  return { name: formula, found: true, version };
 }
 
 async function checkNpm(pkg) {
-  const result = await run(`npm list -g ${pkg}`);
-  return { name: pkg, found: result.ok };
+  const result = await run(`npm list -g ${pkg} --depth=0`);
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const error = (result.stderr || result.error?.message || '').trim();
+
+  if (!result.ok) {
+    return { name: pkg, found: false, error: error || `npm package not installed: ${pkg}` };
+  }
+
+  const match = output.match(new RegExp(`${pkg.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}@(\\S+)`));
+  return { name: pkg, found: true, version: match ? match[1] : undefined };
+}
+
+function parsePipVersion(output) {
+  const match = output.match(/^Version:\s*(.+)$/mi);
+  return match ? match[1].trim() : undefined;
 }
 
 async function checkPip(pkg) {
@@ -28,7 +56,15 @@ async function checkPip(pkg) {
   if (!result.ok) {
     result = await run(`pip3 show ${pkg}`);
   }
-  return { name: pkg, found: result.ok };
+
+  const output = (result.stdout || '').trim();
+  const error = (result.stderr || result.error?.message || '').trim();
+
+  if (!result.ok || !output) {
+    return { name: pkg, found: false, error: error || `pip package not installed: ${pkg}` };
+  }
+
+  return { name: pkg, found: true, version: parsePipVersion(output) };
 }
 
 module.exports = {
