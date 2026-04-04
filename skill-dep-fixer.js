@@ -212,7 +212,7 @@ async function analyzeSkill(skill, opts) {
     status = actions.length > 0 && actions.every((a) => a.ok) ? 'fixed' : 'failed';
     if (actions.length === 0) status = 'failed';
   }
-  if (status === 'ok' && mismatches.length > 0) status = 'mismatch';
+  if (mismatches.length > 0 && status !== 'failed') status = 'mismatch';
 
   const dependencies = checks
     .filter((c) => c.type !== 'bin')
