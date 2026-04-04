@@ -51,6 +51,7 @@ function normalizeInstallEntry(item) {
     id: typeof item.id === 'string' ? item.id : undefined,
     kind: typeof item.kind === 'string' ? item.kind : undefined,
     formula: typeof item.formula === 'string' ? item.formula : undefined,
+    version: typeof item.version === 'string' ? item.version : undefined,
     bins: toArray(item.bins).filter((v) => typeof v === 'string'),
   };
 }
