@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 const { parseArgs } = require('util');
-const { exec } = require('child_process');
 const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const { createInterface } = require('readline/promises');
 const { parseSkills } = require('./src/parsers');
 const { checkBinary, checkBrew, checkNpm, checkPip } = require('./src/checkers');
+const { installBrew, installNpm, installPip } = require('./src/installer');
 const { textReport, jsonReport, discordReport, summarize } = require('./src/reporter');
 
 function usage() {
@@ -117,18 +117,10 @@ async function initSkill(skillName, values) {
   return 0;
 }
 
-function run(command) {
-  return new Promise((resolve) => {
-    exec(command, (error, stdout, stderr) => {
-      resolve({ ok: !error, stdout, stderr, error });
-    });
-  });
-}
-
-function installCommand(entry) {
-  if (entry.kind === 'brew' && entry.formula) return `brew install ${entry.formula}`;
-  if (entry.kind === 'npm' && entry.id) return `npm install -g ${entry.id}`;
-  if (entry.kind === 'pip' && entry.id) return `pip3 install ${entry.id}`;
+function installForDirective(directive) {
+  if (directive.kind === 'brew' && directive.formula) return installBrew(directive.formula);
+  if (directive.kind === 'npm' && directive.id) return installNpm(directive.id);
+  if (directive.kind === 'pip' && directive.id) return installPip(directive.id);
   return null;
 }
 
@@ -191,17 +183,16 @@ async function analyzeSkill(skill, opts) {
       const needed = depMissing || binMissing;
       if (!needed) continue;
 
-      const command = installCommand(directive);
-      if (!command) continue;
+      const installResult = installForDirective(directive);
+      if (!installResult) continue;
 
       if (opts.fix) {
-        const installResult = await run(command);
-        actions.push({ command, ok: installResult.ok });
-        if (!installResult.ok && !error) {
-          error = (installResult.stderr || installResult.stdout || installResult.error?.message || '').trim();
+        actions.push({ command: `${installResult.name} via ${directive.kind}`, ok: installResult.status === 'installed' });
+        if (installResult.status === 'failed' && !error) {
+          error = installResult.message;
         }
       } else {
-        actions.push({ command, ok: null, dryRun: true });
+        actions.push({ command: `${installResult.name} via ${directive.kind}`, ok: null, dryRun: true });
       }
     }
   }
