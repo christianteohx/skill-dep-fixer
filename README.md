@@ -114,3 +114,21 @@ metadata:
         version: 2.54.0
         bins: [gh]
 ```
+
+## Install
+
+### Homebrew (macOS)
+```bash
+brew install christianteohx/tap/skill-dep-fixer
+```
+
+### Direct binary (macOS/Linux)
+```bash
+curl -fsSL https://github.com/christianteohx/skill-dep-fixer/releases/download/v1.0.0/skill-dep-fixer -o ~/bin/skill-dep-fixer
+chmod +x ~/bin/skill-dep-fixer
+```
+
+### npm
+```bash
+npm install -g skill-dep-fixer
+```
