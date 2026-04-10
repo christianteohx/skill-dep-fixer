@@ -33,71 +33,103 @@ When triggered, generate a complete Node.js CLI project that:
 
 ### Core requirements
 - Node.js 18+
-- No external runtime dependencies (pure JavaScript/Node.js stdlib where possible)
-- One-file entry point (`skill-dep-fixer.js`) with optional `src/` submodules
-- Proper CLI argument parsing (manual or `minimist`-light)
-- Colored terminal output using ANSI codes
+- No external runtime dependencies where possible
+- One-file entry point with optional src/ submodules
+- CLI argument parsing (manual or minimist-light)
+- Colored terminal output with ANSI codes or chalk
 
 ### Commands to implement
 
-| Command | Description |
-|---------|-------------|
-| `skill-dep-fixer --dry-run` | Scan and report (no changes) |
-| `skill-dep-fixer --fix` | Install missing dependencies |
-| `skill-dep-fixer --skill <name>` | Check a specific skill |
-| `skill-dep-fixer --json` | JSON output |
-| `skill-dep-fixer --report` | Discord-formatted compact report |
-| `skill-dep-fixer --help` | Show usage |
+```
+skill-dep-fixer --dry-run     scan and report (no changes)
+skill-dep-fixer --fix        install missing dependencies
+skill-dep-fixer --skill name check a specific skill
+skill-dep-fixer --json       JSON output
+skill-dep-fixer --report     Discord-formatted compact report
+skill-dep-fixer --help       show usage
+```
 
 ### What to scan
 
-Parse `SKILL.md` frontmatter from skills in:
-- `~/.openclaw/skills/*/SKILL.md`
-- `~/.openclaw/workspace/skills/*/SKILL.md`
+Parse SKILL.md frontmatter from skills in:
+- ~/.openclaw/skills/*/SKILL.md
+- ~/.openclaw/workspace/skills/*/SKILL.md
 
-Look for the `metadata.openclaw.install` array:
+Look for the metadata.openclaw.install array.
 
-```yaml
+Example frontmatter:
+
+```
 metadata:
   openclaw:
     install:
-      - id: chalk
-        kind: npm
-        bins: []
-        label: "Install chalk"
       - id: gh
         kind: brew
-        bins: ["gh"]
+        formula: gh
+        bins: [gh]
         label: "Install GitHub CLI"
-      - id: python3
-        kind: pip
-        bins: ["python3"]
-        label: "Install Python"
 ```
 
-### Detection & fix logic
+### Detection and fix logic
 
-| Kind | Detection | Fix command |
-|------|-----------|-------------|
-| `brew` | `brew list <pkg>` | `brew install <pkg>` |
-| `npm` | `npm list -g <pkg>` | `npm install -g <pkg>` |
-| `pip` | `pip show <pkg>` | `pip install <pkg>` |
-| `bins` (system) | `which <bin>` | Not auto-fixable — report only |
+brew   : detect with brew list, fix with brew install
+npm    : detect with npm list -g, fix with npm install -g
+pip    : detect with pip show, fix with pip install
+bins   : detect with which, not auto-fixable (report only)
 
 ### Output format
 
-Text table:
-```
-✅ github          — all deps satisfied
-❌ summarize       — missing: summarize (brew) → installed ✅
-⚠️  some-skill    — missing: some-binary (not auto-fixable)
-```
+Text report (default):
+- Header: "Skill Dependency Report"
+- One line per skill: [icon] [name] [status] missing: [list]
+- Status icons: ok, fixed, failed, mismatch
+- Summary line at bottom
 
-Exit codes: `0` = all fixed/satisfied, `1` = some failed.
+Discord report (--report): compact single-line per skill in a code block.
+
+Exit codes: 0 = all fixed/satisfied, 1 = some failed.
+
+## Keeping packages updated
+
+When using any skill that wraps a Homebrew/package tool:
+
+1. **Check if the skill has a newer version**: run `clawhub inspect <skill-name>` and compare version
+2. **If ClawHub skill is newer**: run `clawhub update <skill-name>` to pull new SKILL.md
+3. **If the underlying package has a newer version**: update it too:
+   - Homebrew: `brew upgrade <tap>/<package>` (e.g., `brew upgrade christianteohx/tap/calctl`)
+   - npm: `npm update -g <package>`
+   - pip: `pip install --upgrade <package>`
+4. **When publishing a skill update**: update both SKILL.md AND the underlying package in the right order:
+   - First: update GitHub repo and create new release
+   - Second: update Homebrew formula / package registry
+   - Third: publish updated SKILL.md to ClawHub
+
+This ensures agents using the skill always get the latest tool with matching documentation.
 
 ## Output
 
 After generating, tell the user:
-1. How to run: `node skill-dep-fixer.js --help`
-2. How to install globally: `npm install -g skill-dep-fixer`
-3. How to test: `skill-dep-fixer --dry-run`
+
+Homebrew (recommended):
+```
+brew install christianteohx/tap/skill-dep-fixer
+```
+
+Direct binary:
+```
+curl -fsSL https://github.com/christianteohx/skill-dep-fixer/releases/latest/download/skill-dep-fixer -o ~/bin/skill-dep-fixer
+chmod +x ~/bin/skill-dep-fixer
+```
+
+npm:
+```
+npm install -g skill-dep-fixer
+```
+
+Build from source:
+```
+git clone https://github.com/christianteohx/skill-dep-fixer
+cd skill-dep-fixer
+npm install
+node skill-dep-fixer.js --help
+```
